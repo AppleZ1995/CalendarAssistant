@@ -50,6 +50,155 @@ function initializeDatabase() {
         });
       }
     });
+
+    // Create money table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS money (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        amount REAL NOT NULL,
+        currency TEXT DEFAULT 'USD',
+        date TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating money table:', err);
+      } else {
+        console.log('Money table initialized');
+      }
+    });
+  });
+}
+
+// Record money transaction
+function recordMoney(type, title, amount, currency, date, callback) {
+  const sql = `
+    INSERT INTO money (type, title, amount, currency, date)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+
+  db.run(sql, [type, title, amount, currency || 'USD', date], function(err) {
+    if (err) {
+      callback(err, null);
+    } else {
+      callback(null, {
+        id: this.lastID,
+        type,
+        title,
+        amount,
+        currency: currency || 'USD',
+        date,
+        created_at: new Date().toISOString()
+      });
+    }
+  });
+}
+
+// Get all money records
+function getAllMoney(callback) {
+  const sql = 'SELECT * FROM money ORDER BY date DESC';
+
+  db.all(sql, (err, rows) => {
+    if (err) {
+      callback(err, null);
+    } else {
+      callback(null, rows || []);
+    }
+  });
+}
+
+// Get money by type
+function getMoneyByType(type, callback) {
+  const sql = 'SELECT * FROM money WHERE type = ? ORDER BY date DESC';
+
+  db.all(sql, [type], (err, rows) => {
+    if (err) {
+      callback(err, null);
+    } else {
+      callback(null, rows || []);
+    }
+  });
+}
+
+// Get money by date range
+function getMoneyByDateRange(startDate, endDate, callback) {
+  const sql = `
+    SELECT * FROM money 
+    WHERE date >= ? AND date <= ?
+    ORDER BY date DESC
+  `;
+
+  db.all(sql, [startDate, endDate], (err, rows) => {
+    if (err) {
+      callback(err, null);
+    } else {
+      callback(null, rows || []);
+    }
+  });
+}
+
+// Get money summary by type
+function getMoneySummaryByType(callback) {
+  const sql = `
+    SELECT type, COUNT(*) as count, SUM(amount) as total, AVG(amount) as average, currency
+    FROM money
+    GROUP BY type, currency
+    ORDER BY total DESC
+  `;
+
+  db.all(sql, (err, rows) => {
+    if (err) {
+      callback(err, null);
+    } else {
+      callback(null, rows || []);
+    }
+  });
+}
+
+// Update money record
+function updateMoney(id, type, title, amount, currency, date, callback) {
+  const sql = `
+    UPDATE money
+    SET type = ?, title = ?, amount = ?, currency = ?, date = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `;
+
+  db.run(sql, [type, title, amount, currency || 'USD', date, id], function(err) {
+    if (err) {
+      callback(err, null);
+    } else {
+      callback(null, { id, changes: this.changes });
+    }
+  });
+}
+
+// Delete money record
+function deleteMoney(id, callback) {
+  const sql = 'DELETE FROM money WHERE id = ?';
+
+  db.run(sql, [id], function(err) {
+    if (err) {
+      callback(err, null);
+    } else {
+      callback(null, { id, deleted: this.changes });
+    }
+  });
+}
+
+// Get money by ID
+function getMoneyById(id, callback) {
+  const sql = 'SELECT * FROM money WHERE id = ?';
+
+  db.get(sql, [id], (err, row) => {
+    if (err) {
+      callback(err, null);
+    } else {
+      callback(null, row);
+    }
   });
 }
 
@@ -237,6 +386,14 @@ module.exports = {
   getExpensesByDateRange,
   getExpenseSummaryByCategory,
   getTotalExpenses,
+  recordMoney,
+  getAllMoney,
+  getMoneyByType,
+  getMoneyByDateRange,
+  getMoneySummaryByType,
+  updateMoney,
+  deleteMoney,
+  getMoneyById,
   closeDatabase,
   db
 };
