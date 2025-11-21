@@ -39,21 +39,9 @@
         border-radius: 4px;
         cursor: pointer;
         transition: all 0.2s ease;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         padding: 0.25rem;
         text-align: center;
-        position: relative;
-      }
-      .calendar-day-number {
-        font-weight: 500;
-        font-size: 0.9rem;
-      }
-      .calendar-day-lunar {
-        font-size: 0.65rem;
-        color: #666;
-        font-style: italic;
-        margin-top: 0.1rem;
-        line-height: 1.2;
       }
       .calendar-day:hover {
         background-color: #e7f3ff;
@@ -67,9 +55,6 @@
         background-color: #667eea;
         color: white;
         font-weight: bold;
-      }
-      .calendar-day.today .calendar-day-lunar {
-        color: #e0e0e0;
       }
       .calendar-day.has-event {
         background-color: #d4edda;
@@ -93,6 +78,7 @@
           <ul class="navbar-nav ms-auto">
             <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
             <li class="nav-item"><a class="nav-link" href="/users">Users</a></li>
+            <li class="nav-item"><a class="nav-link" href="/expenses">💰 Expenses</a></li>
           </ul>
         </div>
       </div>
@@ -191,84 +177,6 @@
 
       let currentDate = new Date();
 
-      // Comprehensive Chinese lunar calendar lookup table (1900-2100)
-      // Each entry encodes month structure: bit 0-11 = months 1-12 (1=30 days, 0=29 days), bits 12-15 = leap month
-      const lunarCalendar = [
-        0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2,
-        0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0,
-        0x049b0, 0x0a4b8, 0x0a4b0, 0x0b27a, 0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5,
-        0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0, 0x049b0,
-        0x0a4b8, 0x0a4b0, 0x0b27a, 0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5, 0x04ad0,
-        0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0, 0x049b0, 0x0a4b8,
-        0x0a4b0, 0x0b27a, 0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5, 0x04ad0, 0x0a4d0,
-        0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0, 0x049b0, 0x0a4b8, 0x0a4b0,
-        0x0b27a, 0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5, 0x04ad0, 0x0a4d0, 0x0d4d4,
-        0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0, 0x049b0, 0x0a4b8, 0x0a4b0, 0x0b27a,
-        0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250
-      ];
-
-      // Function to convert Gregorian date to Chinese lunar date
-      function getChineseLunarDate(year, month, day) {
-        try {
-          // Reference date: 1900/1/31 (first day of Chinese calendar in this epoch)
-          const refDate = new Date(1900, 0, 31);
-          const currentDate = new Date(year, month - 1, day);
-          
-          // Calculate day difference
-          const timeDiff = currentDate.getTime() - refDate.getTime();
-          let dayDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-
-          let lunarYear = 1900;
-          let lunarMonth = 1;
-          let lunarDay = 1;
-
-          // Find the lunar year
-          for (let i = 1900; i <= year + 1 && i < 1900 + lunarCalendar.length; i++) {
-            const idx = i - 1900;
-            const data = lunarCalendar[idx];
-            
-            // Calculate total days in this lunar year
-            let yearDays = 0;
-            for (let j = 0; j < 12; j++) {
-              // Check if month has 30 days (bit set) or 29 days
-              yearDays += ((data >> j) & 1) ? 30 : 29;
-            }
-            
-            if (dayDiff < yearDays) {
-              lunarYear = i;
-              break;
-            }
-            dayDiff -= yearDays;
-          }
-
-          // Find the lunar month and day
-          const yearData = lunarCalendar[lunarYear - 1900];
-          for (let m = 0; m < 12; m++) {
-            const monthDays = ((yearData >> m) & 1) ? 30 : 29;
-            
-            if (dayDiff < monthDays) {
-              lunarMonth = m + 1;
-              lunarDay = dayDiff + 1;
-              break;
-            }
-            dayDiff -= monthDays;
-          }
-
-          // Format Chinese date
-          const lunarMonths = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊'];
-          const lunarDayNames = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
-                            '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
-                            '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'];
-          
-          const monthStr = lunarMonths[Math.max(0, Math.min(11, lunarMonth - 1))];
-          const dayStr = lunarDayNames[Math.max(0, Math.min(29, lunarDay - 1))];
-          
-          return `${monthStr}${dayStr}`;
-        } catch (e) {
-          return '';
-        }
-      }
-
       function renderCalendar() {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -308,21 +216,7 @@
         for (let i = 1; i <= daysInMonth; i++) {
           const day = document.createElement('div');
           day.className = 'calendar-day';
-          
-          // Create day number element
-          const dayNum = document.createElement('div');
-          dayNum.className = 'calendar-day-number';
-          dayNum.textContent = i;
-          day.appendChild(dayNum);
-
-          // Get and add Chinese lunar date
-          const chineseDate = getChineseLunarDate(year, month + 1, i);
-          if (chineseDate) {
-            const lunarElem = document.createElement('div');
-            lunarElem.className = 'calendar-day-lunar';
-            lunarElem.textContent = chineseDate;
-            day.appendChild(lunarElem);
-          }
+          day.textContent = i;
 
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
           const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === i;

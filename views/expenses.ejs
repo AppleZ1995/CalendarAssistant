@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Expense Tracker - <%= title %></title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+      .expense-card {
+        border-left: 4px solid #667eea;
+      }
+      .expense-amount {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #667eea;
+      }
+      .category-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+      .chart-container {
+        position: relative;
+        height: 350px;
+        margin-bottom: 2rem;
+      }
+      .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+      }
+      .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-top: 0.5rem;
+      }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="/">📅 <%= title %></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link" href="/">Calendar</a></li>
+            <li class="nav-item"><a class="nav-link active" href="/expenses">💰 Expenses</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container my-5">
+      <div class="row mb-4">
+        <div class="col-12">
+          <h1>💰 Expense Tracker</h1>
+          <p class="text-muted">Track and manage your expenses</p>
+        </div>
+      </div>
+
+      <!-- Add Expense Form -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Add New Expense</h5>
+            </div>
+            <div class="card-body">
+              <form id="expenseForm">
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="expenseTitle" class="form-label">Description</label>
+                    <input type="text" class="form-control" id="expenseTitle" name="title" placeholder="e.g., Grocery shopping" required>
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label for="expenseAmount" class="form-label">Amount</label>
+                    <div class="input-group">
+                      <input type="number" class="form-control" id="expenseAmount" name="cost" placeholder="0.00" step="0.01" required>
+                      <select class="form-select" style="max-width: 80px;" id="expenseCurrency" name="currency">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                        <option value="CNY">CNY</option>
+                        <option value="JPY">JPY</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label for="expenseCategory" class="form-label">Category</label>
+                    <select class="form-select" id="expenseCategory" name="category">
+                      <option value="Food">Food</option>
+                      <option value="Transport">Transport</option>
+                      <option value="Entertainment">Entertainment</option>
+                      <option value="Shopping">Shopping</option>
+                      <option value="Bills">Bills</option>
+                      <option value="Health">Health</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label for="expenseDate" class="form-label">Date</label>
+                    <input type="date" class="form-control" id="expenseDate" name="date" required>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="expenseTime" class="form-label">Time</label>
+                    <input type="time" class="form-control" id="expenseTime" name="time">
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="submitBtn" class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100" id="submitBtn">Add Expense</button>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="expenseDescription" class="form-label">Notes (optional)</label>
+                  <textarea class="form-control" id="expenseDescription" name="description" rows="2" placeholder="Add any notes..."></textarea>
+                </div>
+              </form>
+              <div id="expenseMessage" class="alert alert-info d-none" role="alert"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+          <div class="stat-card">
+            <div class="stat-label">Total Expenses</div>
+            <div class="stat-value" id="totalAmount">$0.00</div>
+          </div>
+        </div>
+        <div class="col-md-3 mb-3">
+          <div class="stat-card">
+            <div class="stat-label">This Month</div>
+            <div class="stat-value" id="monthAmount">$0.00</div>
+          </div>
+        </div>
+        <div class="col-md-3 mb-3">
+          <div class="stat-card">
+            <div class="stat-label">This Week</div>
+            <div class="stat-value" id="weekAmount">$0.00</div>
+          </div>
+        </div>
+        <div class="col-md-3 mb-3">
+          <div class="stat-card">
+            <div class="stat-label">Expense Count</div>
+            <div class="stat-value" id="expenseCount">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="row mb-4">
+        <div class="col-lg-6">
+          <div class="card shadow-sm">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Expenses by Category</h5>
+            </div>
+            <div class="card-body">
+              <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card shadow-sm">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Category Breakdown</h5>
+            </div>
+            <div class="card-body">
+              <div id="categorySummary"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expenses List -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Recent Expenses</h5>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshBtn">🔄 Refresh</button>
+            </div>
+            <div class="card-body" id="expensesList"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bg-light py-3 mt-5">
+      <div class="container text-center small text-muted">&copy; <%= new Date().getFullYear() %> <%= title %></div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+      let categoryChart = null;
+
+      // Initialize on load
+      document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        document.getElementById('expenseDate').value = `${yyyy}-${mm}-${dd}`;
+
+        initializeForm();
+        loadExpenses();
+        loadSummary();
+        loadCategoryChart();
+
+        // Refresh button
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+          loadExpenses();
+          loadSummary();
+          loadCategoryChart();
+        });
+      });
+
+      function initializeForm() {
+        document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          const title = document.getElementById('expenseTitle').value;
+          const description = document.getElementById('expenseDescription').value;
+          const date = document.getElementById('expenseDate').value;
+          const time = document.getElementById('expenseTime').value;
+          const category = document.getElementById('expenseCategory').value;
+          const cost = parseFloat(document.getElementById('expenseAmount').value);
+          const currency = document.getElementById('expenseCurrency').value;
+
+          try {
+            const response = await fetch('/api/moments', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title, description, date, time, category, cost, currency })
+            });
+
+            const result = await response.json();
+            const messageDiv = document.getElementById('expenseMessage');
+
+            if (response.ok) {
+              messageDiv.classList.remove('alert-danger', 'd-none');
+              messageDiv.classList.add('alert-success');
+              messageDiv.textContent = `✓ Expense recorded: $${cost.toFixed(2)} for "${title}"`;
+
+              document.getElementById('expenseForm').reset();
+              document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+
+              setTimeout(() => messageDiv.classList.add('d-none'), 3000);
+              loadExpenses();
+              loadSummary();
+              loadCategoryChart();
+            } else {
+              messageDiv.classList.remove('alert-success', 'd-none');
+              messageDiv.classList.add('alert-danger');
+              messageDiv.textContent = `✗ Error: ${result.error}`;
+            }
+          } catch (error) {
+            const messageDiv = document.getElementById('expenseMessage');
+            messageDiv.classList.remove('alert-success', 'd-none');
+            messageDiv.classList.add('alert-danger');
+            messageDiv.textContent = `✗ Error: ${error.message}`;
+          }
+        });
+      }
+
+      async function loadExpenses() {
+        try {
+          const response = await fetch('/api/moments');
+          const result = await response.json();
+          const expenses = (result.moments || []).filter(m => m.cost > 0).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+          const expensesList = document.getElementById('expensesList');
+          
+          if (expenses.length === 0) {
+            expensesList.innerHTML = '<p class="text-muted">No expenses recorded yet.</p>';
+            return;
+          }
+
+          expensesList.innerHTML = expenses.map(exp => `
+            <div class="card expense-card mb-2">
+              <div class="card-body p-3">
+                <div class="row align-items-center">
+                  <div class="col-md-6">
+                    <h6 class="mb-1">${exp.title}</h6>
+                    <small class="text-muted">${exp.date} ${exp.time ? exp.time : ''}</small>
+                    ${exp.description ? `<p class="mb-0 small mt-1">${exp.description}</p>` : ''}
+                  </div>
+                  <div class="col-md-3">
+                    <span class="category-badge bg-light text-dark">${exp.category}</span>
+                  </div>
+                  <div class="col-md-3 text-end">
+                    <div class="expense-amount">${exp.cost.toFixed(2)} ${exp.currency}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        } catch (error) {
+          console.error('Error loading expenses:', error);
+        }
+      }
+
+      async function loadSummary() {
+        try {
+          const response = await fetch('/api/expenses/total');
+          const result = await response.json();
+          
+          if (result.success && result.totals.length > 0) {
+            const total = result.totals[0].total || 0;
+            document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
+          }
+
+          // Load summary by category
+          const categoryResponse = await fetch('/api/expenses/summary');
+          const categoryResult = await categoryResponse.json();
+
+          if (categoryResult.success) {
+            const categories = categoryResult.summary || [];
+            const summaryHtml = categories.map(cat => `
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <span>${cat.category} (${cat.count})</span>
+                <strong>${cat.total.toFixed(2)} ${cat.currency}</strong>
+              </div>
+            `).join('');
+            document.getElementById('categorySummary').innerHTML = summaryHtml || '<p class="text-muted">No data</p>';
+          }
+
+          // Update counts
+          const allResponse = await fetch('/api/moments');
+          const allResult = await allResponse.json();
+          const expenses = (allResult.moments || []).filter(m => m.cost > 0);
+          document.getElementById('expenseCount').textContent = expenses.length;
+
+          // Calculate month and week totals
+          const today = new Date();
+          const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+          const monthTotal = expenses.filter(e => e.date >= monthStart).reduce((sum, e) => sum + e.cost, 0);
+          document.getElementById('monthAmount').textContent = `$${monthTotal.toFixed(2)}`;
+
+          const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          const weekTotal = expenses.filter(e => e.date >= weekAgo).reduce((sum, e) => sum + e.cost, 0);
+          document.getElementById('weekAmount').textContent = `$${weekTotal.toFixed(2)}`;
+        } catch (error) {
+          console.error('Error loading summary:', error);
+        }
+      }
+
+      async function loadCategoryChart() {
+        try {
+          const response = await fetch('/api/expenses/summary');
+          const result = await response.json();
+          const categories = result.summary || [];
+
+          if (categories.length === 0) return;
+
+          const labels = categories.map(c => c.category);
+          const data = categories.map(c => c.total);
+          const colors = [
+            'rgba(102, 126, 234, 0.8)',
+            'rgba(118, 75, 162, 0.8)',
+            'rgba(237, 100, 166, 0.8)',
+            'rgba(255, 154, 158, 0.8)',
+            'rgba(250, 208, 196, 0.8)',
+            'rgba(255, 242, 204, 0.8)',
+            'rgba(234, 226, 183, 0.8)'
+          ];
+
+          const ctx = document.getElementById('categoryChart');
+          if (categoryChart) categoryChart.destroy();
+          
+          categoryChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels,
+              datasets: [{
+                data,
+                backgroundColor: colors.slice(0, labels.length),
+                borderColor: '#fff',
+                borderWidth: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom' } }
+            }
+          });
+        } catch (error) {
+          console.error('Error loading category chart:', error);
+        }
+      }
+    </script>
+  </body>
+</html>
