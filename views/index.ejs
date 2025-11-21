@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %></title>
+    <!-- Bootstrap CSS (CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Local stylesheet (kept for custom overrides) -->
+    <link rel="stylesheet" href="/stylesheets/style.css" />
+    <style>
+      .calendar-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+      }
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+      }
+      .calendar-day-header {
+        font-weight: bold;
+        text-align: center;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 4px;
+      }
+      .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.85rem;
+        padding: 0.25rem;
+        text-align: center;
+        position: relative;
+      }
+      .calendar-day-number {
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+      .calendar-day-lunar {
+        font-size: 0.65rem;
+        color: #666;
+        font-style: italic;
+        margin-top: 0.1rem;
+        line-height: 1.2;
+      }
+      .calendar-day:hover {
+        background-color: #e7f3ff;
+        border-color: #667eea;
+      }
+      .calendar-day.other-month {
+        color: #adb5bd;
+        background-color: #f8f9fa;
+      }
+      .calendar-day.today {
+        background-color: #667eea;
+        color: white;
+        font-weight: bold;
+      }
+      .calendar-day.today .calendar-day-lunar {
+        color: #e0e0e0;
+      }
+      .calendar-day.has-event {
+        background-color: #d4edda;
+        border-color: #28a745;
+      }
+      .chart-container {
+        position: relative;
+        height: 350px;
+        margin-bottom: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="#"><%= title %></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="/users">Users</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container my-5">
+      <!-- Calendar Header -->
+      <div class="calendar-header">
+        <h1 class="mb-2">Calendar Dashboard</h1>
+        <p class="mb-0">Track your events and manage your schedule</p>
+      </div>
+
+      <div class="row">
+        <!-- Calendar View -->
+        <div class="col-12 col-lg-8 mb-4 mb-lg-0">
+          <div class="card shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <button class="btn btn-sm btn-outline-primary" id="prevMonth">← Previous</button>
+              <h5 class="mb-0" id="monthYear"></h5>
+              <button class="btn btn-sm btn-outline-primary" id="nextMonth">Next →</button>
+            </div>
+            <div class="card-body">
+              <div class="calendar-grid" id="calendarGrid"></div>
+              <div class="alert alert-info small">
+                <strong>Legend:</strong> 
+                <span class="badge bg-primary me-2">Today</span>
+                <span class="badge bg-success">Events</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Chart -->
+        <div class="col-12 col-lg-4">
+          <div class="card shadow-sm">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Weekly Activity</h5>
+            </div>
+            <div class="card-body">
+              <div class="chart-container">
+                <canvas id="activityChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="row mt-4">
+        <div class="col-md-4 mb-3">
+          <div class="card text-center">
+            <div class="card-body">
+              <h6 class="card-title text-muted">Total Events</h6>
+              <h3 class="text-primary" id="totalEvents">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div class="card text-center">
+            <div class="card-body">
+              <h6 class="card-title text-muted">This Month</h6>
+              <h3 class="text-success" id="thisMonthEvents">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div class="card text-center">
+            <div class="card-body">
+              <h6 class="card-title text-muted">Upcoming</h6>
+              <h3 class="text-warning" id="upcomingEvents">0</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bg-light py-3 mt-5">
+      <div class="container text-center small text-muted">&copy; <%= new Date().getFullYear() %> <%= title %></div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle (Popper included) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <script>
+      // Sample event data
+      const events = {
+        '2025-11-05': 'Team Meeting',
+        '2025-11-10': 'Project Deadline',
+        '2025-11-15': 'Review Session',
+        '2025-11-20': 'Conference',
+        '2025-11-22': 'Lunch',
+        '2025-11-28': 'Planning'
+      };
+
+      let currentDate = new Date();
+
+      // Comprehensive Chinese lunar calendar lookup table (1900-2100)
+      // Each entry encodes month structure: bit 0-11 = months 1-12 (1=30 days, 0=29 days), bits 12-15 = leap month
+      const lunarCalendar = [
+        0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2,
+        0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0,
+        0x049b0, 0x0a4b8, 0x0a4b0, 0x0b27a, 0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5,
+        0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0, 0x049b0,
+        0x0a4b8, 0x0a4b0, 0x0b27a, 0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5, 0x04ad0,
+        0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0, 0x049b0, 0x0a4b8,
+        0x0a4b0, 0x0b27a, 0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5, 0x04ad0, 0x0a4d0,
+        0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0, 0x049b0, 0x0a4b8, 0x0a4b0,
+        0x0b27a, 0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5, 0x04ad0, 0x0a4d0, 0x0d4d4,
+        0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, 0x095b0, 0x049b0, 0x0a4b8, 0x0a4b0, 0x0b27a,
+        0x06a60, 0x06d30, 0x0aea6, 0x05b60, 0x09370, 0x04db5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250
+      ];
+
+      // Function to convert Gregorian date to Chinese lunar date
+      function getChineseLunarDate(year, month, day) {
+        try {
+          // Reference date: 1900/1/31 (first day of Chinese calendar in this epoch)
+          const refDate = new Date(1900, 0, 31);
+          const currentDate = new Date(year, month - 1, day);
+          
+          // Calculate day difference
+          const timeDiff = currentDate.getTime() - refDate.getTime();
+          let dayDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+          let lunarYear = 1900;
+          let lunarMonth = 1;
+          let lunarDay = 1;
+
+          // Find the lunar year
+          for (let i = 1900; i <= year + 1 && i < 1900 + lunarCalendar.length; i++) {
+            const idx = i - 1900;
+            const data = lunarCalendar[idx];
+            
+            // Calculate total days in this lunar year
+            let yearDays = 0;
+            for (let j = 0; j < 12; j++) {
+              // Check if month has 30 days (bit set) or 29 days
+              yearDays += ((data >> j) & 1) ? 30 : 29;
+            }
+            
+            if (dayDiff < yearDays) {
+              lunarYear = i;
+              break;
+            }
+            dayDiff -= yearDays;
+          }
+
+          // Find the lunar month and day
+          const yearData = lunarCalendar[lunarYear - 1900];
+          for (let m = 0; m < 12; m++) {
+            const monthDays = ((yearData >> m) & 1) ? 30 : 29;
+            
+            if (dayDiff < monthDays) {
+              lunarMonth = m + 1;
+              lunarDay = dayDiff + 1;
+              break;
+            }
+            dayDiff -= monthDays;
+          }
+
+          // Format Chinese date
+          const lunarMonths = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊'];
+          const lunarDayNames = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
+                            '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
+                            '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'];
+          
+          const monthStr = lunarMonths[Math.max(0, Math.min(11, lunarMonth - 1))];
+          const dayStr = lunarDayNames[Math.max(0, Math.min(29, lunarDay - 1))];
+          
+          return `${monthStr}${dayStr}`;
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        // Update header
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'];
+        document.getElementById('monthYear').textContent = `${monthNames[month]} ${year}`;
+
+        // Get first day of month and number of days
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+
+        // Day headers
+        const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        dayHeaders.forEach(day => {
+          const header = document.createElement('div');
+          header.className = 'calendar-day-header';
+          header.textContent = day;
+          grid.appendChild(header);
+        });
+
+        // Previous month days
+        for (let i = firstDay - 1; i >= 0; i--) {
+          const day = document.createElement('div');
+          day.className = 'calendar-day other-month';
+          day.textContent = daysInPrevMonth - i;
+          grid.appendChild(day);
+        }
+
+        // Current month days
+        const today = new Date();
+        for (let i = 1; i <= daysInMonth; i++) {
+          const day = document.createElement('div');
+          day.className = 'calendar-day';
+          
+          // Create day number element
+          const dayNum = document.createElement('div');
+          dayNum.className = 'calendar-day-number';
+          dayNum.textContent = i;
+          day.appendChild(dayNum);
+
+          // Get and add Chinese lunar date
+          const chineseDate = getChineseLunarDate(year, month + 1, i);
+          if (chineseDate) {
+            const lunarElem = document.createElement('div');
+            lunarElem.className = 'calendar-day-lunar';
+            lunarElem.textContent = chineseDate;
+            day.appendChild(lunarElem);
+          }
+
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+          const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === i;
+          const hasEvent = events[dateStr];
+
+          if (isToday) {
+            day.classList.add('today');
+          } else if (hasEvent) {
+            day.classList.add('has-event');
+          }
+
+          day.title = hasEvent ? `Event: ${hasEvent}` : '';
+          grid.appendChild(day);
+        }
+
+        // Next month days
+        const totalCells = grid.children.length - 7;
+        const remainingCells = 42 - totalCells;
+        for (let i = 1; i <= remainingCells; i++) {
+          const day = document.createElement('div');
+          day.className = 'calendar-day other-month';
+          day.textContent = i;
+          grid.appendChild(day);
+        }
+
+        // Update stats
+        updateStats(year, month);
+      }
+
+      function updateStats(year, month) {
+        let thisMonth = 0;
+        let upcoming = 0;
+        const today = new Date();
+
+        for (const dateStr in events) {
+          const [y, m, d] = dateStr.split('-').map(Number);
+          if (y === year && m === month + 1) thisMonth++;
+          if (new Date(y, m - 1, d) > today) upcoming++;
+        }
+
+        document.getElementById('totalEvents').textContent = Object.keys(events).length;
+        document.getElementById('thisMonthEvents').textContent = thisMonth;
+        document.getElementById('upcomingEvents').textContent = upcoming;
+      }
+
+      function initChart() {
+        const ctx = document.getElementById('activityChart');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+              label: 'Events',
+              data: [2, 3, 1, 4, 2, 3, 1],
+              backgroundColor: 'rgba(102, 126, 234, 0.6)',
+              borderColor: 'rgba(102, 126, 234, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                max: 5
+              }
+            }
+          }
+        });
+      }
+
+      // Event listeners
+      document.getElementById('prevMonth').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+      });
+
+      document.getElementById('nextMonth').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+      });
+
+      // Initialize on load
+      renderCalendar();
+      initChart();
+    </script>
+  </body>
+</html>
